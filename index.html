@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Self–AI IOS (Continuous)</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --self:#5b8def;
+      --ai:#76c7a2;
+      --btn:#10b981;
+      --danger:#ef4444;
+      --shadow:0 10px 30px rgba(0,0,0,.08);
+      --radius:16px;
+      --canvasH: 360px;
+    }
+    html,body{height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; color:var(--text); background:#f7f7fb;}
+    .wrap{max-width:900px; margin:0 auto; padding:18px;}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;}
+    .hdr{padding:16px 16px 10px 16px; border-bottom:1px solid var(--line);}
+    h1{font-size:18px; margin:0 0 6px 0;}
+    .sub{font-size:13px; color:var(--muted); line-height:1.35;}
+    .body{padding:14px 16px 16px 16px;}
+    .canvasWrap{background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+    canvas{display:block; width:100%; height:var(--canvasH); touch-action:none;}
+    .controls{margin-top:14px; display:grid; gap:12px;}
+    .row{display:grid; grid-template-columns: 90px 1fr 70px; gap:10px; align-items:center;}
+    .label{font-size:13px; color:var(--muted);}
+    input[type="range"]{width:100%;}
+    input[type="text"]{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:12px; font-size:14px; outline:none;}
+    input[type="text"]:focus{border-color:#a7f3d0; box-shadow:0 0 0 4px rgba(16,185,129,.12);}
+    .val{font-variant-numeric: tabular-nums; font-size:13px; text-align:right; color:#111827;}
+    .footer{display:flex; gap:10px; margin-top:14px; align-items:center; flex-wrap:wrap;}
+    .btn{
+      appearance:none; border:0; padding:12px 16px; border-radius:12px;
+      background:var(--btn); color:white; font-weight:700; cursor:pointer;
+      box-shadow:0 6px 18px rgba(16,185,129,.25);
+    }
+    .btn:active{transform:translateY(1px);}
+    .btn.secondary{background:#111827; box-shadow:0 6px 18px rgba(17,24,39,.20);}
+    .hint{font-size:12px; color:var(--muted);}
+    .pill{display:inline-flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:999px; padding:6px 10px; background:#fff;}
+    .dot{width:10px; height:10px; border-radius:999px; display:inline-block;}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    @media (max-width:520px){
+      :root{ --canvasH: 320px; }
+      .row{grid-template-columns: 70px 1fr 60px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="hdr">
+        <h1>Basic Capacity</h1>
+        <div class="sub">
+          Adjust the <b>size</b> of the two circles to represent how large you feel your <b>Self</b> and <b>AI</b> are.
+          Drag the circles to represent your perceived relationship. More overlap / closer distance means a tighter relationship.
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="canvasWrap">
+          <canvas id="c"></canvas>
+        </div>
+
+        <div class="controls">
+          <div class="row">
+            <div class="label"><span class="pill"><span class="dot" style="background:var(--self)"></span>Self</span></div>
+            <input id="selfR" type="range" min="40" max="120" step="1" value="78" />
+            <div class="val"><span id="selfRv">78</span> px</div>
+          </div>
+
+          <div class="row">
+            <div class="label"><span class="pill"><span class="dot" style="background:var(--ai)"></span>AI</span></div>
+            <input id="aiR" type="range" min="40" max="120" step="1" value="78" />
+            <div class="val"><span id="aiRv">78</span> px</div>
+          </div>
+
+          <div class="row">
+            <div class="label">ID (optional)</div>
+            <input id="pid" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="32" placeholder="e.g., 010918" />
+            <div class="val mono" id="status">ready</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <button class="btn" id="submitBtn">Submit</button>
+          <button class="btn secondary" id="resetBtn" type="button">Reset</button>
+          <span class="hint">On submit, results are sent to the parent page via <span class="mono">postMessage</span>.</span>
+        </div>
+
+        <div class="hint" style="margin-top:10px">
+          Outputs: <span class="mono">overlap_ratio</span>, <span class="mono">psych_distance</span> (normalized),
+          <span class="mono">self_radius</span>, <span class="mono">ai_radius</span>, <span class="mono">relative_size</span>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const selfR = document.getElementById('selfR');
+  const aiR = document.getElementById('aiR');
+  const selfRv = document.getElementById('selfRv');
+  const aiRv = document.getElementById('aiRv');
+  const pid = document.getElementById('pid');
+  const statusEl = document.getElementById('status');
+  const submitBtn = document.getElementById('submitBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  let W = 0, H = 0;
+
+  const state = {
+    self: { x: 0, y: 0, r: +selfR.value, color: css('--self'), label: 'Self' },
+    ai:   { x: 0, y: 0, r: +aiR.value,   color: css('--ai'),   label: 'AI'   },
+    drag: { active:false, which:null, dx:0, dy:0 }
+  };
+
+  function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function fitCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    W = Math.floor(rect.width * dpr);
+    H = Math.floor(rect.height * dpr);
+    canvas.width = W;
+    canvas.height = H;
+
+    // init positions (classic non-overlap, left/right)
+    const midY = H/2;
+    const gap = Math.floor(W*0.14);
+    state.self.x = Math.floor(W/2 - gap);
+    state.ai.x   = Math.floor(W/2 + gap);
+    state.self.y = midY;
+    state.ai.y   = midY;
+
+    clampAll();
+    draw();
+  }
+
+  function clampAll(){
+    clampCircle(state.self);
+    clampCircle(state.ai);
+  }
+
+  function clampCircle(c){
+    const pad = 6*dpr;
+    c.x = Math.max(c.r+pad, Math.min(W - c.r - pad, c.x));
+    c.y = Math.max(c.r+pad, Math.min(H - c.r - pad, c.y));
+  }
+
+  function clear(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function draw(){
+    clear();
+
+    // subtle center guide line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 2*dpr;
+    ctx.setLineDash([8*dpr, 10*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(W/2, 10*dpr);
+    ctx.lineTo(W/2, H-10*dpr);
+    ctx.stroke();
+    ctx.restore();
+
+    drawCircle(state.self);
+    drawCircle(state.ai);
+
+    // live metrics (small)
+    const m = metrics();
+    ctx.save();
+    ctx.fillStyle = 'rgba(17,24,39,0.75)';
+    ctx.font = `${12*dpr}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
+    ctx.fillText(`overlap: ${(m.overlap_ratio*100).toFixed(1)}%  dist: ${(m.psych_distance*100).toFixed(1)}%  relSize: ${m.relative_size.toFixed(3)}`, 12*dpr, H-14*dpr);
+    ctx.restore();
+  }
+
+  function drawCircle(c){
+    // fill
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI*2);
+    ctx.fillStyle = hexToRgba(c.color, 0.65);
+    ctx.fill();
+    // outline
+    ctx.lineWidth = 3*dpr;
+    ctx.strokeStyle = hexToRgba(c.color, 0.95);
+    ctx.stroke();
+
+    // label
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = `700 ${Math.max(16*dpr, Math.min(28*dpr, c.r*0.45))}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(c.label, c.x, c.y);
+    ctx.restore();
+  }
+
+  function hexToRgba(hex, a){
+    // expects #RRGGBB
+    const h = hex.replace('#','').trim();
+    const r = parseInt(h.slice(0,2),16);
+    const g = parseInt(h.slice(2,4),16);
+    const b = parseInt(h.slice(4,6),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function dist(x1,y1,x2,y2){
+    const dx = x2-x1, dy = y2-y1;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  function overlapArea(r1, r2, d){
+    // circle-circle intersection area
+    if(d >= r1 + r2) return 0;
+    if(d <= Math.abs(r1 - r2)){
+      const rMin = Math.min(r1, r2);
+      return Math.PI * rMin * rMin;
+    }
+    const a1 = 2*Math.acos((d*d + r1*r1 - r2*r2) / (2*d*r1));
+    const a2 = 2*Math.acos((d*d + r2*r2 - r1*r1) / (2*d*r2));
+    const area1 = 0.5*r1*r1*(a1 - Math.sin(a1));
+    const area2 = 0.5*r2*r2*(a2 - Math.sin(a2));
+    return area1 + area2;
+  }
+
+  function metrics(){
+    const rS = state.self.r;
+    const rA = state.ai.r;
+    const d = dist(state.self.x, state.self.y, state.ai.x, state.ai.y);
+
+    const inter = overlapArea(rS, rA, d);
+
+    // overlap ratio: intersection / area(Self)  (interpretable as "how much AI is included in Self representation")
+    const areaSelf = Math.PI * rS * rS;
+    const overlap_ratio = inter / areaSelf; // 0..1 (can be 1 if AI fully inside Self and AI>=Self? actually capped by self area)
+
+    // psychological distance normalized by usable canvas diagonal
+    const diag = Math.sqrt(W*W + H*H);
+    const psych_distance = d / diag; // 0..~1
+
+    // relative size: AI / Self (radius ratio)
+    const relative_size = rA / rS;
+
+    return {
+      overlap_ratio: clamp01(overlap_ratio),
+      psych_distance: clamp01(psych_distance),
+      self_radius: rS,
+      ai_radius: rA,
+      relative_size
+    };
+  }
+
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+  function hitTest(x,y){
+    // prioritize the one on top: if overlap, whichever center is closer
+    const ds = dist(x,y,state.self.x,state.self.y);
+    const da = dist(x,y,state.ai.x,state.ai.y);
+    const inS = ds <= state.self.r;
+    const inA = da <= state.ai.r;
+    if(inS && inA) return (ds <= da) ? 'self' : 'ai';
+    if(inS) return 'self';
+    if(inA) return 'ai';
+    return null;
+  }
+
+  function pointerPos(ev){
+    const rect = canvas.getBoundingClientRect();
+    const x = (ev.clientX - rect.left) * dpr;
+    const y = (ev.clientY - rect.top) * dpr;
+    return {x,y};
+  }
+
+  function onDown(ev){
+    ev.preventDefault();
+    const p = pointerPos(ev);
+    const which = hitTest(p.x, p.y);
+    if(!which) return;
+    state.drag.active = true;
+    state.drag.which = which;
+    const c = which === 'self' ? state.self : state.ai;
+    state.drag.dx = p.x - c.x;
+    state.drag.dy = p.y - c.y;
+    canvas.setPointerCapture(ev.pointerId);
+  }
+
+  function onMove(ev){
+    if(!state.drag.active) return;
+    ev.preventDefault();
+    const p = pointerPos(ev);
+    const c = state.drag.which === 'self' ? state.self : state.ai;
+    c.x = p.x - state.drag.dx;
+    c.y = p.y - state.drag.dy;
+    clampCircle(c);
+    draw();
+  }
+
+  function onUp(ev){
+    if(!state.drag.active) return;
+    ev.preventDefault();
+    state.drag.active = false;
+    state.drag.which = null;
+    draw();
+  }
+
+  function reset(){
+    selfR.value = 78;
+    aiR.value = 78;
+    selfRv.textContent = '78';
+    aiRv.textContent = '78';
+    state.self.r = 78;
+    state.ai.r = 78;
+    fitCanvas();
+    statusEl.textContent = 'ready';
+  }
+
+  function submit(){
+    const out = metrics();
+    const payload = {
+      type: 'SELF_AI_IOS_RESULT',
+      ts: Date.now(),
+      participant_id: pid.value.trim() || null,
+      ...out
+    };
+
+    // send to parent (CREDAMO page)
+    window.parent.postMessage(payload, '*');
+
+    statusEl.textContent = 'sent';
+    statusEl.style.color = '#059669';
+  }
+
+  // UI bindings
+  selfR.addEventListener('input', () => {
+    const v = +selfR.value;
+    state.self.r = v;
+    selfRv.textContent = String(v);
+    clampAll();
+    draw();
+  });
+  aiR.addEventListener('input', () => {
+    const v = +aiR.value;
+    state.ai.r = v;
+    aiRv.textContent = String(v);
+    clampAll();
+    draw();
+  });
+
+  submitBtn.addEventListener('click', submit);
+  resetBtn.addEventListener('click', reset);
+
+  // Pointer events for mouse + touch
+  canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup', onUp);
+  canvas.addEventListener('pointercancel', onUp);
+
+  window.addEventListener('resize', () => {
+    // keep current circles, only refit canvas size
+    const rect = canvas.getBoundingClientRect();
+    W = Math.floor(rect.width * dpr);
+    H = Math.floor(rect.height * dpr);
+    canvas.width = W;
+    canvas.height = H;
+    clampAll();
+    draw();
+  });
+
+  // init
+  // set canvas CSS height via variable already; just fit
+  requestAnimationFrame(fitCanvas);
+})();
+</script>
+</body>
+</html>
