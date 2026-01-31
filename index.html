@@ -1,515 +1,218 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Self–AI Task</title>
-  <style>
-    :root{
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --border:#e5e7eb;
-      --text:#111827;
-      --muted:#6b7280;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Self–AI Task</title>
 
-      --selfFill: rgba(59,130,246,.45);
-      --selfStroke: rgba(59,130,246,.95);
-      --aiFill: rgba(16,185,129,.35);
-      --aiStroke: rgba(16,185,129,.85);
+<style>
+body{
+font-family:system-ui,-apple-system;
+background:#f6f7fb;
+margin:0;
+padding:20px;
+}
 
-      --hl:#facc15; /* yellow highlight */
-      --radiusMin: 40;
-      --radiusMax: 220;
-      --radiusInit: 100;
-    }
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: var(--bg);
-      color: var(--text);
-    }
-    .wrap{
-      max-width: 980px;
-      margin: 18px auto;
-      padding: 12px;
-    }
-    .card{
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: 0 6px 20px rgba(0,0,0,.05);
-    }
-    h1{
-      font-size: 22px;
-      margin: 0 0 8px 0;
-      font-weight: 800;
-    }
-    .desc{
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--muted);
-      margin: 0 0 14px 0;
-    }
-    .hl{
-      font-weight: 800;
-      background: var(--hl);
-      padding: 0 4px;
-      border-radius: 4px;
-      color: #111827;
-    }
+.card{
+max-width:900px;
+margin:auto;
+background:white;
+border-radius:16px;
+padding:24px;
+box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
 
-    .canvasWrap{
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: #fff;
-      padding: 10px;
-    }
-    .canvas{
-      width: 100%;
-      height: 360px;
-      border-radius: 12px;
-      background: #ffffff;
-      position: relative;
-      overflow: hidden;
-    }
+h2{margin-top:0}
 
-    .circle{
-      position:absolute;
-      border-radius: 9999px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight: 800;
-      font-size: 24px;
-      color:#ffffff;
-      user-select: none;
-      touch-action: none;
-      cursor: grab;
-    }
-    .circle:active{ cursor: grabbing; }
+.highlight{
+background:#ffd84d;
+padding:0 6px;
+border-radius:6px;
+font-weight:600;
+}
 
-    .self{
-      background: var(--selfFill);
-      border: 4px solid var(--selfStroke);
-      text-shadow: 0 1px 1px rgba(0,0,0,.15);
-    }
-    .ai{
-      background: var(--aiFill);
-      border: 4px solid var(--aiStroke);
-      text-shadow: 0 1px 1px rgba(0,0,0,.15);
-    }
+.canvas{
+position:relative;
+height:360px;
+border-radius:12px;
+border:1px solid #ddd;
+margin:20px 0;
+overflow:hidden;
+}
 
-    .controls{
-      margin-top: 14px;
-      border-top: 1px solid var(--border);
-      padding-top: 14px;
-    }
-    .row{
-      display:flex;
-      gap: 12px;
-      align-items:center;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .tag{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      min-width: 86px;
-      color: var(--text);
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .dot{
-      width: 10px;
-      height: 10px;
-      border-radius: 9999px;
-    }
-    .dotSelf{ background: var(--selfStroke); }
-    .dotAI{ background: var(--aiStroke); }
-    input[type="range"]{
-      flex: 1 1 240px;
-      min-width: 220px;
-    }
+.circle{
+position:absolute;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:700;
+color:white;
+user-select:none;
+touch-action:none;
+}
 
-    .field{
-      width: 100%;
-      display:flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
-    }
-    .label{
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--text);
-    }
-    .input{
-      width: 100%;
-      max-width: 100%;
-      padding: 12px 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font-size: 16px;
-      outline: none;
-      background: #fff;
-    }
-    .hint{
-      font-size: 12px;
-      color: var(--muted);
-    }
+#self{background:rgba(66,133,244,.45);border:4px solid #4285f4}
+#ai{background:rgba(52,168,83,.45);border:4px solid #34a853}
 
-    .actions{
-      display:flex;
-      gap: 10px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-    .btn{
-      border: none;
-      border-radius: 12px;
-      padding: 12px 18px;
-      font-weight: 800;
-      font-size: 15px;
-      cursor: pointer;
-    }
-    .btnPrimary{
-      background: #10b981;
-      color: #fff;
-    }
-    .btnGhost{
-      background: #111827;
-      color: #fff;
-    }
-    .err{
-      margin-top: 10px;
-      font-size: 13px;
-      color: #b91c1c;
-      font-weight: 700;
-      display:none;
-    }
+.slider{width:100%}
 
-    #endScreen{
-      display:none;
-      text-align:center;
-      padding: 26px 10px 10px;
-    }
-    #endScreen .t1{
-      font-size: 18px;
-      font-weight: 900;
-      margin-bottom: 8px;
-    }
-    #endScreen .t2{
-      font-size: 14px;
-      color: var(--muted);
-    }
+input{
+width:100%;
+padding:10px;
+border-radius:10px;
+border:1px solid #ccc;
+margin-top:6px;
+}
 
-    @media (max-width: 520px){
-      .canvas{ height: 300px; }
-      .circle{ font-size: 20px; }
-      h1{ font-size: 20px; }
-    }
-  </style>
+button{
+padding:12px 20px;
+border:none;
+border-radius:10px;
+font-weight:700;
+cursor:pointer;
+}
+
+#submit{background:#16a34a;color:white}
+#reset{background:#111827;color:white;margin-left:10px}
+
+.end{
+text-align:center;
+padding:80px 20px;
+font-size:22px;
+display:none;
+}
+
+</style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card">
 
-      <h1>Please read the instructions carefully</h1>
-      <p class="desc">
-        <span class="hl">Adjust</span> the size of the two circles to represent how large you feel your <b>Self</b> and <b>AI</b> are.
-        <span class="hl">Drag</span> the circles (left–right only) to represent your perceived relationship.
-        More overlap means a closer relationship.
-      </p>
+<div class="card" id="main">
 
-      <div class="canvasWrap" id="taskArea">
-        <div class="canvas" id="canvas">
-          <div class="circle self" id="selfCircle">Self</div>
-          <div class="circle ai" id="aiCircle">AI</div>
-        </div>
+<h2>Please read the instructions carefully</h2>
 
-        <div class="controls" id="controls">
-          <div class="row">
-            <div class="tag"><span class="dot dotSelf"></span>Self</div>
-            <input id="selfRange" type="range" min="40" max="220" value="100" />
-          </div>
+<p>
+<span class="highlight">Adjust</span> the size of the two circles to represent how large you feel your Self and AI are.
+<span class="highlight">Drag</span> the circles (left–right only) to represent your perceived relationship.
+More overlap means a closer relationship.
+</p>
 
-          <div class="row">
-            <div class="tag"><span class="dot dotAI"></span>AI</div>
-            <input id="aiRange" type="range" min="40" max="220" value="100" />
-          </div>
+<div class="canvas" id="canvas">
+<div class="circle" id="self">Self</div>
+<div class="circle" id="ai">AI</div>
+</div>
 
-          <div class="field">
-            <div class="label">Birth (6 digits)</div>
-            <input
-              id="birth"
-              class="input"
-              type="tel"
-              inputmode="numeric"
-              pattern="[0-9]{6}"
-              maxlength="6"
-              placeholder="e.g., 010918"
-              autocomplete="off"
-              required
-            />
-            <div class="hint">Birth is used for research purposes only.</div>
-          </div>
+Self
+<input type="range" id="selfSize" min="60" max="220" value="100" class="slider">
 
-          <div class="actions">
-            <button class="btn btnPrimary" id="submitBtn">Submit</button>
-            <button class="btn btnGhost" id="resetBtn" type="button">Reset</button>
-          </div>
+AI
+<input type="range" id="aiSize" min="60" max="220" value="100" class="slider">
 
-          <div class="err" id="err">Please enter your birth (6 digits).</div>
-        </div>
-      </div>
+<div style="margin-top:14px">
+Birth (6 digits)
+<input id="birth" placeholder="e.g., 010918" maxlength="6">
+<div style="font-size:12px;color:#666;margin-top:4px">Birth is used for research purposes only.</div>
+</div>
 
-      <div id="endScreen">
-        <div class="t1">Thank you.</div>
-        <div class="t2">Please return to the questionnaire to continue.</div>
-      </div>
+<div style="margin-top:20px">
+<button id="submit">Submit</button>
+<button id="reset">Reset</button>
+</div>
 
-    </div>
-  </div>
+</div>
 
-  <script>
-    const canvas = document.getElementById('canvas');
-    const selfEl = document.getElementById('selfCircle');
-    const aiEl = document.getElementById('aiCircle');
-    const selfRange = document.getElementById('selfRange');
-    const aiRange = document.getElementById('aiRange');
-    const birth = document.getElementById('birth');
-    const errEl = document.getElementById('err');
-    const submitBtn = document.getElementById('submitBtn');
-    const resetBtn = document.getElementById('resetBtn');
+<div class="end" id="end">
+✅ Thank you for completing this task.<br><br>
+Please return to the questionnaire to continue.
+</div>
 
-    const endScreen = document.getElementById('endScreen');
-    const taskArea = document.getElementById('taskArea');
-    const controls = document.getElementById('controls');
+<script>
+const canvas=document.getElementById("canvas");
+const self=document.getElementById("self");
+const ai=document.getElementById("ai");
 
-    const state = {
-      self: { r: 100, x: 0, y: 0 },
-      ai:   { r: 100, x: 0, y: 0 },
-      drag: { who: null, offsetX: 0 }
-    };
+let selfX=240, aiX=460;
 
-    function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
-    function clamp01(v){ return clamp(v, 0, 1); }
-    function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.sqrt(dx*dx+dy*dy); }
+function update(){
+const sr=+selfSize.value;
+const ar=+aiSize.value;
 
-    function getCanvasSize(){
-      const rect = canvas.getBoundingClientRect();
-      return { W: rect.width, H: rect.height };
-    }
+self.style.width=self.style.height=sr*2+"px";
+ai.style.width=ai.style.height=ar*2+"px";
 
-    function layout(){
-      const { W, H } = getCanvasSize();
+self.style.left=(selfX-sr)+"px";
+ai.style.left=(aiX-ar)+"px";
 
-      state.self.r = +selfRange.value;
-      state.ai.r   = +aiRange.value;
+self.style.top="120px";
+ai.style.top="120px";
+}
 
-      const fixedY = H * 0.52; // fixed vertical line (no free y dragging)
-      state.self.y = fixedY;
-      state.ai.y   = fixedY;
+selfSize.oninput=aiSize.oninput=update;
 
-      // initialize if x not set or on resize
-      if (!state.self.x || !state.ai.x){
-        const gap = 40;
-        state.self.x = W * 0.38;
-        state.ai.x   = W * 0.62;
-        // keep separated at start
-        if (Math.abs(state.ai.x - state.self.x) < (state.self.r + state.ai.r + gap)){
-          state.ai.x = state.self.x + (state.self.r + state.ai.r + gap);
-        }
-      }
+function drag(el,isSelf){
+el.onpointerdown=e=>{
+el.setPointerCapture(e.pointerId);
+el.onpointermove=ev=>{
+if(isSelf) selfX=ev.offsetX+el.offsetLeft+el.offsetWidth/2;
+else aiX=ev.offsetX+el.offsetLeft+el.offsetWidth/2;
+update();
+}
+}
+}
 
-      // clamp within bounds
-      state.self.x = clamp(state.self.x, state.self.r, W - state.self.r);
-      state.ai.x   = clamp(state.ai.x, state.ai.r, W - state.ai.r);
+drag(self,true);
+drag(ai,false);
 
-      render();
-    }
+update();
 
-    function render(){
-      const { W, H } = getCanvasSize();
+function overlap(){
+const sr=+selfSize.value;
+const ar=+aiSize.value;
+const d=Math.abs(selfX-aiX);
+if(d>=sr+ar) return 0;
+if(d<=Math.abs(sr-ar)) return Math.PI*Math.min(sr,ar)**2;
+const x=(d*d-ar*ar+sr*sr)/(2*d);
+const h=Math.sqrt(sr*sr-x*x);
+return sr*sr*Math.acos(x/sr)+ar*ar*Math.acos((d-x)/ar)-d*h;
+}
 
-      // position circle by center
-      setCircle(selfEl, state.self.x, state.self.y, state.self.r);
-      setCircle(aiEl, state.ai.x, state.ai.y, state.ai.r);
+submit.onclick=()=>{
+if(birth.value.length!==6){alert("Please enter 6-digit birth.");return;}
 
-      // keep y constant on resize
-      state.self.y = H * 0.52;
-      state.ai.y   = H * 0.52;
-      setCircle(selfEl, state.self.x, state.self.y, state.self.r);
-      setCircle(aiEl, state.ai.x, state.ai.y, state.ai.r);
-    }
+const sr=+selfSize.value;
+const ar=+aiSize.value;
 
-    function setCircle(el, cx, cy, r){
-      el.style.width = (r*2) + 'px';
-      el.style.height = (r*2) + 'px';
-      el.style.left = (cx - r) + 'px';
-      el.style.top  = (cy - r) + 'px';
-    }
+const ov=overlap();
+const overlapPct=Math.round(ov/(Math.PI*Math.min(sr,ar)**2)*100);
 
-    function overlapArea(r1, r2, d){
-      if (d >= r1 + r2) return 0;
-      if (d <= Math.abs(r1 - r2)) {
-        const r = Math.min(r1, r2);
-        return Math.PI * r * r;
-      }
-      const a1 = 2 * Math.acos((d*d + r1*r1 - r2*r2) / (2*d*r1));
-      const a2 = 2 * Math.acos((d*d + r2*r2 - r1*r1) / (2*d*r2));
-      const area1 = 0.5 * r1*r1 * (a1 - Math.sin(a1));
-      const area2 = 0.5 * r2*r2 * (a2 - Math.sin(a2));
-      return area1 + area2;
-    }
+const dist=Math.abs(selfX-aiX)/Math.sqrt(canvas.clientWidth**2+canvas.clientHeight**2);
 
-    function metrics(){
-      const { W, H } = getCanvasSize();
+const rel=(ar-sr)/(ar+sr);
 
-      const rS = state.self.r;
-      const rA = state.ai.r;
+const payload={
+类型:"自我AI连续IOS结果",
+自我大小:sr,
+AI大小:ar,
+重叠程度:overlapPct+"%",
+心理距离:dist,
+相对大小:rel,
+生日6位:birth.value,
+时间戳:Date.now()
+};
 
-      const d = dist(state.self.x, state.self.y, state.ai.x, state.ai.y);
+window.parent.postMessage(payload,"*");
 
-      const inter = overlapArea(rS, rA, d);
-      const areaSelf = Math.PI * rS * rS;
+document.getElementById("main").style.display="none";
+document.getElementById("end").style.display="block";
 
-      const overlap_ratio = clamp01(inter / areaSelf);
-      const overlap_percent = Math.round(overlap_ratio * 100);
-      const overlap_percent_str = `${overlap_percent}%`;
+setTimeout(()=>{
+location.href="https://www.credamo.com/s/uIf2quano";
+},1800);
+}
 
-      const diag = Math.sqrt(W*W + H*H);
-      const psych_distance = clamp01(d / diag); // normalized 0~1
+reset.onclick=()=>location.reload();
+</script>
 
-      // normalized relative size (-1~1)
-      const relative_size_norm = (rA - rS) / (rA + rS);
-
-      return {
-        overlap_percent_str,
-        psych_distance,
-        self_radius: rS,
-        ai_radius: rA,
-        relative_size_norm
-      };
-    }
-
-    function showErr(msg){
-      errEl.textContent = msg;
-      errEl.style.display = 'block';
-    }
-
-    function clearErr(){
-      errEl.style.display = 'none';
-    }
-
-    function submit(){
-      const b = birth.value.trim();
-      if(!/^\d{6}$/.test(b)){
-        showErr('Please enter your birth (6 digits).');
-        return;
-      }
-      clearErr();
-
-      const out = metrics();
-
-      // Chinese keys (Console / parent receiver)
-      const payload = {
-        类型: '自我AI连续IOS结果',
-        时间戳: Date.now(),
-        生日6位: b,
-        重叠程度: out.overlap_percent_str,    // "23%"
-        心理距离: out.psych_distance,         // 0~1
-        自我大小: out.self_radius,            // px radius
-        AI大小: out.ai_radius,                // px radius
-        相对大小: out.relative_size_norm       // -1~1
-      };
-
-      window.parent.postMessage(payload, '*');
-
-      // end screen
-      taskArea.style.display = 'none';
-      endScreen.style.display = 'block';
-    }
-
-    function resetAll(){
-      selfRange.value = 100;
-      aiRange.value = 100;
-      birth.value = '';
-      clearErr();
-
-      state.self.r = 100;
-      state.ai.r = 100;
-
-      const { W, H } = getCanvasSize();
-      const fixedY = H * 0.52;
-      state.self.y = fixedY;
-      state.ai.y = fixedY;
-      state.self.x = W * 0.38;
-      state.ai.x = W * 0.62;
-
-      layout();
-    }
-
-    // Drag (left-right only)
-    function onPointerDown(who, e){
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const px = e.clientX - rect.left;
-
-      state.drag.who = who;
-      const curX = who === 'self' ? state.self.x : state.ai.x;
-      state.drag.offsetX = px - curX;
-
-      (who === 'self' ? selfEl : aiEl).setPointerCapture(e.pointerId);
-    }
-
-    function onPointerMove(e){
-      if(!state.drag.who) return;
-
-      const { W } = getCanvasSize();
-      const rect = canvas.getBoundingClientRect();
-      const px = e.clientX - rect.left;
-
-      if(state.drag.who === 'self'){
-        const r = state.self.r;
-        state.self.x = clamp(px - state.drag.offsetX, r, W - r);
-      }else{
-        const r = state.ai.r;
-        state.ai.x = clamp(px - state.drag.offsetX, r, W - r);
-      }
-      render();
-    }
-
-    function onPointerUp(){
-      state.drag.who = null;
-    }
-
-    selfEl.addEventListener('pointerdown', e => onPointerDown('self', e));
-    aiEl.addEventListener('pointerdown', e => onPointerDown('ai', e));
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-
-    selfRange.addEventListener('input', () => layout());
-    aiRange.addEventListener('input', () => layout());
-
-    submitBtn.addEventListener('click', submit);
-    resetBtn.addEventListener('click', resetAll);
-
-    // resize
-    let ro = new ResizeObserver(() => {
-      // keep x within bounds after resize
-      const { W } = getCanvasSize();
-      state.self.x = clamp(state.self.x, state.self.r, W - state.self.r);
-      state.ai.x   = clamp(state.ai.x, state.ai.r, W - state.ai.r);
-      layout();
-    });
-    ro.observe(canvas);
-
-    // init
-    layout();
-  </script>
 </body>
 </html>
